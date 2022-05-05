@@ -21,8 +21,6 @@ func (r *transferRep) FindUser(userID int) (entity.User, error) {
 	if db.RowsAffected == 0 {
 		return entity.User{}, errors.New("user is not found")
 	}
-	//fmt.Println(user.Id)
-	//fmt.Println(user.Name)
 	return user, nil
 }
 
@@ -31,4 +29,41 @@ func (r *transferRep) AddMoney(user entity.User, amount int) {
 	newBalance := oldBalance + amount
 	user.Balance = newBalance
 	r.DB.Save(&user)
+}
+
+func (r *transferRep) Transfer(sender entity.User, addressee entity.User, amount int) error {
+
+	if sender.Balance < amount {
+		return errors.New("there is not enough money on the balance sheet")
+	}
+
+	if sender.Id == addressee.Id {
+		return errors.New("the request failed")
+	}
+
+	sender.Balance = sender.Balance - amount
+	addressee.Balance = addressee.Balance + amount
+
+	tx := r.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		return err
+	}
+
+	if err := tx.Save(&sender).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Save(&addressee).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+
 }

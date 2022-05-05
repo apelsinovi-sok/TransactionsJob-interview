@@ -11,7 +11,7 @@ func AddMoney(c *gin.Context) {
 	repository := *c.MustGet("repository").(*interfaces.TransferRepository)
 	userID, err := strconv.Atoi(c.PostForm("id"))
 	money, err := strconv.Atoi(c.PostForm("money"))
-	if err != nil {
+	if err != nil || userID == 0 || money == 0 || money < 0 {
 		c.JSON(http.StatusBadRequest, "invalid arguments")
 		return
 	}
